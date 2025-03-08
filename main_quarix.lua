@@ -18,6 +18,7 @@ local Window = library.NewWindow({
 
 local tabs = {
     Main = Window:AddTab("Visual"),
+    AimBot = Window:AddTab("AimBot"), -- Новая вкладка AimBot
     Settings = library:CreateSettingsTab(Window),
 }
 
@@ -27,12 +28,14 @@ local sections = {
     Circle = tabs.Main:AddSection("ESP Circle", 1),
     Trail = tabs.Main:AddSection("ESP Trail", 1),
     Look = tabs.Main:AddSection("Look Direction", 1),
+    Ammo = tabs.AimBot:AddSection("Ammo Settings", 1), -- Секция для Infinity Ammo
 }
 
 local players = game:GetService("Players")
 local localPlayer = players.LocalPlayer
 local runService = game:GetService("RunService")
 
+-- Переменные для ESP
 local ESPEnabled = false
 local ESPBoxEnabled = false
 local ESPOutlineEnabled = false
@@ -54,6 +57,9 @@ local ESPTrailMaxDistance = 50
 local LookDirectionEnabled = false
 local LookDirectionColor = Color3.fromRGB(255, 255, 255)
 local LookDirectionRainbow = false
+
+-- Переменные для Infinity Ammo
+local InfinityAmmoEnabled = false
 
 -- Функция проверки, жив ли игрок
 local function isPlayerAlive(player)
@@ -125,18 +131,16 @@ end
 -- Функция для создания ESP Name
 local function createTextESP(player)
     if player.Character and player.Character:FindFirstChild("Head") and ESPNameEnabled then
-        -- Удаляем старый BillboardGui, если он существует
         local oldBillboard = player.Character:FindFirstChild("ESP_Text")
         if oldBillboard then
             oldBillboard:Destroy()
         end
 
-        -- Создаем новый BillboardGui
         local billboard = Instance.new("BillboardGui")
         billboard.Name = "ESP_Text"
         billboard.Adornee = player.Character.Head
         billboard.Size = UDim2.new(0, 200, 0, 50)
-        billboard.StudsOffset = Vector3.new(0, 2.5, 0) -- Размещение немного выше головы
+        billboard.StudsOffset = Vector3.new(0, 2.5, 0)
         billboard.AlwaysOnTop = true
 
         local textLabel = Instance.new("TextLabel")
@@ -156,7 +160,7 @@ end
 local function updateTextESP()
     for _, player in pairs(players:GetPlayers()) do
         if player ~= localPlayer and isPlayerAlive(player) then
-            createTextESP(player) -- Создаем или обновляем текст
+            createTextESP(player)
         end
     end
 end
@@ -198,202 +202,44 @@ local function createLookDirection(player)
     beam.Parent = player.Character
 end
 
--- UI Elements
-sections.ESP:AddToggle({
-    text = "Enable ESP Box",
-    flag = "ESP_Box_Toggle",
+-- Функция для Infinity Ammo
+local function enableInfinityAmmo()
+    if InfinityAmmoEnabled and localPlayer.Character then
+        for _, tool in pairs(localPlayer.Character:GetChildren()) do
+            if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                tool.Ammo.Value = math.huge -- Устанавливаем бесконечные патроны
+            end
+        end
+    end
+end
+
+-- UI Elements для Infinity Ammo
+sections.Ammo:AddToggle({
+    text = "Infinity Ammo",
+    flag = "Infinity_Ammo_Toggle",
     callback = function(state)
-        ESPBoxEnabled = state
-        updateESPBox()
-    end
-})
-
-sections.ESP:AddColor({
-    text = "ESP Color",
-    flag = "ESP_Color",
-    color = ESPColor,
-    callback = function(color)
-        ESPColor = color
-        updateESPBox()
-    end
-})
-
-sections.ESP:AddToggle({
-    text = "ESP Rainbow",
-    flag = "ESP_Rainbow",
-    callback = function(state)
-        ESPRainbow = state
-        updateESPBox()
-    end
-})
-
-sections.ESP:AddToggle({
-    text = "Enable ESP Outline",
-    flag = "ESP_Outline_Toggle",
-    callback = function(state)
-        ESPOutlineEnabled = state
-        updateESPOutline()
-    end
-})
-
-sections.Extras:AddToggle({
-    text = "ESP Name",
-    flag = "ESP_Name_Toggle",
-    callback = function(state)
-        ESPNameEnabled = state
-        updateTextESP()
-    end
-})
-
-sections.Extras:AddToggle({
-    text = "ESP Weapon",
-    flag = "ESP_Weapon_Toggle",
-    callback = function(state)
-        ESPWeaponEnabled = state
-        updateTextESP()
-    end
-})
-
-sections.Extras:AddToggle({
-    text = "ESP Distance",
-    flag = "ESP_Distance_Toggle",
-    callback = function(state)
-        ESPDistanceEnabled = state
-        updateTextESP()
-    end
-})
-
-sections.Extras:AddToggle({
-    text = "ESP Info",
-    flag = "ESP_Info_Toggle",
-    callback = function(state)
-        ESPInfoEnabled = state
-        updateTextESP()
-    end
-})
-
-sections.ESP:AddToggle({
-    text = "ESP Visible/Invisible",
-    flag = "ESP_Visible_Check",
-    callback = function(state)
-        ESPVisibleCheck = state
-        updateESPBox()
-    end
-})
-
-sections.ESP:AddColor({
-    text = "Visible Color",
-    flag = "ESP_Visible_Color",
-    color = ESPColorVisible,
-    callback = function(color)
-        ESPColorVisible = color
-        updateESPBox()
-    end
-})
-
-sections.ESP:AddColor({
-    text = "Invisible Color",
-    flag = "ESP_Invisible_Color",
-    color = ESPColorInvisible,
-    callback = function(color)
-        ESPColorInvisible = color
-        updateESPBox()
-    end
-})
-
-sections.Circle:AddToggle({
-    text = "ESP Circle",
-    flag = "ESP_Circle_Toggle",
-    callback = function(state)
-        ESPCircleEnabled = state
-        updateESPBox()
-    end
-})
-
-sections.Circle:AddColor({
-    text = "Circle Color",
-    flag = "ESP_Circle_Color",
-    color = ESPCircleColor,
-    callback = function(color)
-        ESPCircleColor = color
-        updateESPBox()
-    end
-})
-
-sections.Circle:AddToggle({
-    text = "Circle Rainbow",
-    flag = "ESP_Circle_Rainbow",
-    callback = function(state)
-        ESPCircleRainbow = state
-        updateESPBox()
-    end
-})
-
-sections.Trail:AddToggle({
-    text = "ESP Trail",
-    flag = "ESP_Trail_Toggle",
-    callback = function(state)
-        ESPTrailEnabled = state
-        updateESPBox()
-    end
-})
-
-sections.Trail:AddColor({
-    text = "Trail Color",
-    flag = "ESP_Trail_Color",
-    color = ESPTrailColor,
-    callback = function(color)
-        ESPTrailColor = color
-        updateESPBox()
-    end
-})
-
-sections.Trail:AddSlider({
-    text = "Trail Distance",
-    flag = "ESP_Trail_Distance",
-    min = 10,
-    max = 100,
-    callback = function(value)
-        ESPTrailMaxDistance = value
-        updateESPBox()
-    end
-})
-
-sections.Look:AddToggle({
-    text = "Look Direction",
-    flag = "ESP_Look_Direction_Toggle",
-    callback = function(state)
-        LookDirectionEnabled = state
-        updateESPBox()
-    end
-})
-
-sections.Look:AddColor({
-    text = "Look Direction Color",
-    flag = "ESP_Look_Direction_Color",
-    color = LookDirectionColor,
-    callback = function(color)
-        LookDirectionColor = color
-        updateESPBox()
-    end
-})
-
-sections.Look:AddToggle({
-    text = "Look Direction Rainbow",
-    flag = "ESP_Look_Direction_Rainbow",
-    callback = function(state)
-        LookDirectionRainbow = state
-        updateESPBox()
+        InfinityAmmoEnabled = state
+        if state then
+            library:SendNotification("Infinity Ammo Enabled", 5, Color3.new(0, 1, 0))
+        else
+            library:SendNotification("Infinity Ammo Disabled", 5, Color3.new(1, 0, 0))
+        end
     end
 })
 
 -- Основной цикл
 runService.RenderStepped:Connect(function()
+    -- Обновление ESP
     updateESPBox()
     updateTextESP()
     createESPCircle(localPlayer)
     createESPTrail()
     createLookDirection(localPlayer)
+
+    -- Обновление Infinity Ammo
+    if InfinityAmmoEnabled then
+        enableInfinityAmmo()
+    end
 end)
 
 library:SendNotification("Quarix Loaded", 5, Color3.new(0, 1, 0))
