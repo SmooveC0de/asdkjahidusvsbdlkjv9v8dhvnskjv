@@ -285,6 +285,48 @@ local function enableGodMode()
     end
 end
 
+-- UI Elements для ESP Box
+sections.ESP:AddToggle({
+    text = "ESP Box",
+    flag = "ESP_Box_Toggle",
+    callback = function(state)
+        ESPBoxEnabled = state
+        if state then
+            library:SendNotification("ESP Box Enabled", 5, Color3.new(0, 1, 0))
+        else
+            library:SendNotification("ESP Box Disabled", 5, Color3.new(1, 0, 0))
+        end
+    end
+})
+
+-- UI Elements для ESP Outline
+sections.ESP:AddToggle({
+    text = "ESP Outline",
+    flag = "ESP_Outline_Toggle",
+    callback = function(state)
+        ESPOutlineEnabled = state
+        if state then
+            library:SendNotification("ESP Outline Enabled", 5, Color3.new(0, 1, 0))
+        else
+            library:SendNotification("ESP Outline Disabled", 5, Color3.new(1, 0, 0))
+        end
+    end
+})
+
+-- UI Elements для ESP Visible/Invisible
+sections.ESP:AddToggle({
+    text = "ESP Visible/Invisible",
+    flag = "ESP_Visible_Toggle",
+    callback = function(state)
+        ESPVisibleCheck = state
+        if state then
+            library:SendNotification("ESP Visible/Invisible Enabled", 5, Color3.new(0, 1, 0))
+        else
+            library:SendNotification("ESP Visible/Invisible Disabled", 5, Color3.new(1, 0, 0))
+        end
+    end
+})
+
 -- UI Elements для Infinity Ammo
 sections.Ammo:AddToggle({
     text = "Infinity Ammo",
