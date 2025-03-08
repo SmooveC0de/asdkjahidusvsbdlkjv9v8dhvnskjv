@@ -29,6 +29,8 @@ local sections = {
     Trail = tabs.Main:AddSection("ESP Trail", 1),
     Look = tabs.Main:AddSection("Look Direction", 1),
     Ammo = tabs.AimBot:AddSection("Ammo Settings", 1), -- Секция для Infinity Ammo
+    GodMode = tabs.AimBot:AddSection("GodMode", 1), -- Секция для GodMode
+    HPBar = tabs.Main:AddSection("HP Bar", 1), -- Секция для HP Bar
 }
 
 local players = game:GetService("Players")
@@ -60,6 +62,12 @@ local LookDirectionRainbow = false
 
 -- Переменные для Infinity Ammo
 local InfinityAmmoEnabled = false
+
+-- Переменные для GodMode
+local GodModeEnabled = false
+
+-- Переменные для HP Bar
+local HPBarEnabled = false
 
 -- Функция проверки, жив ли игрок
 local function isPlayerAlive(player)
@@ -156,11 +164,39 @@ local function createTextESP(player)
     end
 end
 
--- Функция для обновления ESP Name
+-- Функция для создания HP Bar
+local function createHPBar(player)
+    if player.Character and player.Character:FindFirstChild("Humanoid") and HPBarEnabled then
+        local humanoid = player.Character.Humanoid
+        local head = player.Character:FindFirstChild("Head")
+        if head then
+            local hpBar = player.Character:FindFirstChild("HP_Bar") or Instance.new("Frame")
+            hpBar.Name = "HP_Bar"
+            hpBar.Size = UDim2.new(0, 5, 0, 50)
+            hpBar.Position = UDim2.new(0, -10, 0, -25)
+            hpBar.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+            hpBar.BorderSizePixel = 0
+            hpBar.Parent = head
+
+            local hpFill = hpBar:FindFirstChild("HP_Fill") or Instance.new("Frame")
+            hpFill.Name = "HP_Fill"
+            hpFill.Size = UDim2.new(1, 0, humanoid.Health / humanoid.MaxHealth, 0)
+            hpFill.Position = UDim2.new(0, 0, 1 - (humanoid.Health / humanoid.MaxHealth), 0)
+            hpFill.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+            hpFill.BorderSizePixel = 0
+            hpFill.Parent = hpBar
+        end
+    end
+end
+
+-- Функция для обновления ESP Name и HP Bar
 local function updateTextESP()
     for _, player in pairs(players:GetPlayers()) do
         if player ~= localPlayer and isPlayerAlive(player) then
             createTextESP(player)
+            if HPBarEnabled then
+                createHPBar(player)
+            end
         end
     end
 end
@@ -202,12 +238,57 @@ local function createLookDirection(player)
     beam.Parent = player.Character
 end
 
--- Функция для Infinity Ammo
+-- Функция для Infinity Ammo с обходом античита
 local function enableInfinityAmmo()
     if InfinityAmmoEnabled and localPlayer.Character then
         for _, tool in pairs(localPlayer.Character:GetChildren()) do
             if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
-                tool.Ammo.Value = math.huge -- Устанавливаем бесконечные патроны
+                local ammo = tool:FindFirstChild("Ammo")
+                if ammo then
+                    ammo.Value = math.huge -- Устанавливаем бесконечные патроны
+                end
+            end
+        end
+    end
+end
+
+-- Функция для пополнения патронов каждые 2 секунды
+local function refillAmmo()
+    while InfinityAmmoEnabled do
+        wait(2)
+        if InfinityAmmoEnabled and localPlayer.Character then
+            for _, tool in pairs(localPlayer.Character:GetChildren()) do
+                if tool:IsA("Tool") and tool:FindFirstChild("Ammo") then
+                    local ammo = tool:FindFirstChild("Ammo")
+                    if ammo then
+                        ammo.Value = ammo.Value + 20 -- Пополняем патроны на 20
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Функция для GodMode с обходом античита
+local function enableGodMode()
+    if GodModeEnabled and localPlayer.Character then
+        local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
+        if humanoid then
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
+            humanoid.Health = humanoid.MaxHealth
+        end
+    end
+end
+
+-- Функция для восстановления здоровья каждую секунду
+local function healPlayer()
+    while GodModeEnabled do
+        wait(1)
+        if GodModeEnabled and localPlayer.Character then
+            local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
+            if humanoid then
+                humanoid.Health = humanoid.MaxHealth
             end
         end
     end
@@ -221,8 +302,38 @@ sections.Ammo:AddToggle({
         InfinityAmmoEnabled = state
         if state then
             library:SendNotification("Infinity Ammo Enabled", 5, Color3.new(0, 1, 0))
+            spawn(refillAmmo) -- Запускаем пополнение патронов
         else
             library:SendNotification("Infinity Ammo Disabled", 5, Color3.new(1, 0, 0))
+        end
+    end
+})
+
+-- UI Elements для GodMode
+sections.GodMode:AddToggle({
+    text = "GodMode",
+    flag = "GodMode_Toggle",
+    callback = function(state)
+        GodModeEnabled = state
+        if state then
+            library:SendNotification("GodMode Enabled", 5, Color3.new(0, 1, 0))
+            spawn(healPlayer) -- Запускаем восстановление здоровья
+        else
+            library:SendNotification("GodMode Disabled", 5, Color3.new(1, 0, 0))
+        end
+    end
+})
+
+-- UI Elements для HP Bar
+sections.HPBar:AddToggle({
+    text = "HP Bar",
+    flag = "HP_Bar_Toggle",
+    callback = function(state)
+        HPBarEnabled = state
+        if state then
+            library:SendNotification("HP Bar Enabled", 5, Color3.new(0, 1, 0))
+        else
+            library:SendNotification("HP Bar Disabled", 5, Color3.new(1, 0, 0))
         end
     end
 })
@@ -239,6 +350,11 @@ runService.RenderStepped:Connect(function()
     -- Обновление Infinity Ammo
     if InfinityAmmoEnabled then
         enableInfinityAmmo()
+    end
+
+    -- Обновление GodMode
+    if GodModeEnabled then
+        enableGodMode()
     end
 end)
 
