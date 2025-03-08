@@ -269,28 +269,19 @@ local function refillAmmo()
     end
 end
 
--- Функция для GodMode с обходом античита
+-- Функция для GodMode на серверной части
 local function enableGodMode()
-    if GodModeEnabled and localPlayer.Character then
-        local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
-        if humanoid then
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
-            humanoid:SetStateEnabled(Enum.HumanoidStateType.Physics, false)
-            humanoid.Health = humanoid.MaxHealth
-        end
-    end
-end
+    if GodModeEnabled then
+        -- Используем RemoteEvent для взаимодействия с сервером
+        local remoteEvent = Instance.new("RemoteEvent")
+        remoteEvent.Name = "GodModeEvent"
+        remoteEvent.Parent = game:GetService("ReplicatedStorage")
 
--- Функция для восстановления здоровья каждую секунду
-local function healPlayer()
-    while GodModeEnabled do
-        wait(1)
-        if GodModeEnabled and localPlayer.Character then
-            local humanoid = localPlayer.Character:FindFirstChild("Humanoid")
-            if humanoid then
-                humanoid.Health = humanoid.MaxHealth
-            end
-        end
+        -- Отправляем запрос на сервер для включения GodMode
+        remoteEvent:FireServer(true)
+    else
+        -- Отправляем запрос на сервер для выключения GodMode
+        remoteEvent:FireServer(false)
     end
 end
 
@@ -317,9 +308,10 @@ sections.GodMode:AddToggle({
         GodModeEnabled = state
         if state then
             library:SendNotification("GodMode Enabled", 5, Color3.new(0, 1, 0))
-            spawn(healPlayer) -- Запускаем восстановление здоровья
+            enableGodMode() -- Включаем GodMode
         else
             library:SendNotification("GodMode Disabled", 5, Color3.new(1, 0, 0))
+            enableGodMode() -- Выключаем GodMode
         end
     end
 })
